@@ -679,13 +679,24 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
+    ImVec2 padding;
+
+    if (g.Style.RetroMode)
+    {
+        padding = style.FramePadding * ImVec2(2.5f, 1.5f);
+    }
+    else
+    {
+        padding = style.FramePadding;
+    }
+
     ImVec2 pos = window->DC.CursorPos;
-    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrLineTextBaseOffset) // Try to vertically align buttons that are smaller/have no padding so that text baseline matches (bit hacky, since it shouldn't be a flag)
-        pos.y += window->DC.CurrLineTextBaseOffset - style.FramePadding.y;
-    ImVec2 size = CalcItemSize(size_arg, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
+    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && padding.y < window->DC.CurrLineTextBaseOffset) // Try to vertically align buttons that are smaller/have no padding so that text baseline matches (bit hacky, since it shouldn't be a flag)
+        pos.y += window->DC.CurrLineTextBaseOffset - padding.y;
+    ImVec2 size = CalcItemSize(size_arg, label_size.x + padding.x * 2.0f, label_size.y + padding.y * 2.0f);
 
     const ImRect bb(pos, pos + size);
-    ItemSize(size, style.FramePadding.y);
+    ItemSize(size, padding.y);
     if (!ItemAdd(bb, id))
         return false;
 
@@ -697,12 +708,22 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
 
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-    RenderNavHighlight(bb, id);
-    RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+    if (g.Style.RetroMode)
+    {
+        const ImU32 fill_col = GetColorU32(ImGuiCol_WindowBg);
+        window->DrawList->AddRectFilled(bb.Min, bb.Max, fill_col, 0.0f);
+
+        window->DrawList->AddRectRetro(bb.Min, bb.Max, (held && hovered));
+    }
+    else
+    {
+        RenderNavHighlight(bb, id);
+        RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+    }
 
     if (g.LogEnabled)
         LogSetNextTextDecoration("[", "]");
-    RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, label, NULL, &label_size, style.ButtonTextAlign, &bb);
+    RenderTextClipped(bb.Min + padding, bb.Max - padding, label, NULL, &label_size, style.ButtonTextAlign, &bb);
 
     // Automatically close popups
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
@@ -797,9 +818,18 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
+    ImRect bb;
+
     // Tweak 1: Shrink hit-testing area if button covers an abnormally large proportion of the visible region. That's in order to facilitate moving the window away. (#3825)
     // This may better be applied as a general hit-rect reduction mechanism for all widgets to ensure the area to move window is always accessible?
-    const ImRect bb(pos, pos + ImVec2(g.FontSize, g.FontSize) + g.Style.FramePadding * 2.0f);
+    if (g.Style.RetroMode)
+    {
+        bb = ImRect(pos, pos + ImVec2(16.0f, 16.0f));
+    }
+    else
+    {
+        bb = ImRect(pos, pos + ImVec2(g.FontSize, g.FontSize) + g.Style.FramePadding * 2.0f);
+    }
     ImRect bb_interact = bb;
     const float area_to_visible_ratio = window->OuterRectClipped.GetArea() / bb.GetArea();
     if (area_to_visible_ratio < 1.5f)
@@ -816,16 +846,34 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
 
     // Render
     // FIXME: Clarify this mess
-    ImU32 col = GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered);
     ImVec2 center = bb.GetCenter();
-    if (hovered)
-        window->DrawList->AddCircleFilled(center, ImMax(2.0f, g.FontSize * 0.5f + 1.0f), col, 12);
 
-    float cross_extent = g.FontSize * 0.5f * 0.7071f - 1.0f;
+    if (g.Style.RetroMode)
+    {
+        const ImU32 col = GetColorU32(ImGuiCol_WindowBg);
+        window->DrawList->AddRectFilled(bb.Min, bb.Max, col, 0.0f);
+        window->DrawList->AddRectRetro(bb.Min, bb.Max, hovered && held);
+    }
+    else
+    {
+        const ImU32 col = GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered);
+        if (hovered)
+            window->DrawList->AddCircleFilled(center, ImMax(2.0f, g.FontSize * 0.5f + 1.0f), col, 12);
+    }
+
+    float cross_extent = (g.Style.RetroMode) ? (3.0f) : (g.FontSize * 0.5f * 0.7071f - 1.0f);
     ImU32 cross_col = GetColorU32(ImGuiCol_Text);
     center -= ImVec2(0.5f, 0.5f);
     window->DrawList->AddLine(center + ImVec2(+cross_extent, +cross_extent), center + ImVec2(-cross_extent, -cross_extent), cross_col, 1.0f);
     window->DrawList->AddLine(center + ImVec2(+cross_extent, -cross_extent), center + ImVec2(-cross_extent, +cross_extent), cross_col, 1.0f);
+    if (g.Style.RetroMode)
+    {
+        window->DrawList->AddLine(center + ImVec2(+cross_extent + 1.0f, +cross_extent), center + ImVec2(1.0f, 0), cross_col, 1.0f);
+        window->DrawList->AddLine(center + ImVec2(+cross_extent + 1.0f, -cross_extent), center + ImVec2(1.0f, 0), cross_col, 1.0f);
+
+        window->DrawList->AddLine(center - ImVec2(1.0f, 0), center + ImVec2(-cross_extent - 1.0f, -cross_extent), cross_col, 1.0f);
+        window->DrawList->AddLine(center - ImVec2(1.0f, 0), center + ImVec2(-cross_extent - 1.0f, +cross_extent), cross_col, 1.0f);
+    }
 
     return pressed;
 }
@@ -836,22 +884,46 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_no
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    ImRect bb(pos, pos + ImVec2(g.FontSize, g.FontSize) + g.Style.FramePadding * 2.0f);
+    ImRect bb;
+
+    if (g.Style.RetroMode)
+    {
+        bb = ImRect(pos, pos + ImVec2(16.0f, 16.0f));
+    }
+    else
+    {
+        bb = ImRect(pos, pos + ImVec2(g.FontSize, g.FontSize) + g.Style.FramePadding * 2.0f);
+    }
     ItemAdd(bb, id);
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
 
     // Render
-    //bool is_dock_menu = (window->DockNodeAsHost && !window->Collapsed);
-    ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     ImU32 text_col = GetColorU32(ImGuiCol_Text);
-    if (hovered || held)
-        window->DrawList->AddCircleFilled(bb.GetCenter() + ImVec2(0,-0.5f), g.FontSize * 0.5f + 1.0f, bg_col, 12);
 
-    if (dock_node)
-        RenderArrowDockMenu(window->DrawList, bb.Min + g.Style.FramePadding, g.FontSize, text_col);
+    if (g.Style.RetroMode)
+    {
+        const ImU32 col = GetColorU32(ImGuiCol_WindowBg);
+        window->DrawList->AddRectFilled(bb.Min, bb.Max, col, 0.0f);
+        window->DrawList->AddRectRetro(bb.Min, bb.Max, hovered && held);
+        ImVec2 center = bb.GetCenter();
+        ImU32 icon_col = GetColorU32(ImGuiCol_Text);
+        window->DrawList->AddLine(center + ImVec2(-4, -1), center + ImVec2(4, -1), icon_col, 1.0f);
+        window->DrawList->AddLine(center + ImVec2(-4, 0), center + ImVec2(4, 0), icon_col, 1.0f);
+    }
     else
-        RenderArrow(window->DrawList, bb.Min + g.Style.FramePadding, text_col, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
+    {
+        //bool is_dock_menu = (window->DockNodeAsHost && !window->Collapsed);
+        ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+        ImU32 text_col = GetColorU32(ImGuiCol_Text);
+        if (hovered || held)
+            window->DrawList->AddCircleFilled(bb.GetCenter() + ImVec2(0,-0.5f), g.FontSize * 0.5f + 1.0f, bg_col, 12);
+
+        if (dock_node)
+            RenderArrowDockMenu(window->DrawList, bb.Min + g.Style.FramePadding, g.FontSize, text_col);
+        else
+            RenderArrow(window->DrawList, bb.Min + g.Style.FramePadding, text_col, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
+    }
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
     if (IsItemActive() && IsMouseDragging(0))
@@ -1003,6 +1075,11 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
     else
         grab_rect = ImRect(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm), bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm) + grab_h_pixels);
     window->DrawList->AddRectFilled(grab_rect.Min, grab_rect.Max, grab_col, style.ScrollbarRounding);
+
+    if (g.Style.RetroMode)
+    {
+        window->DrawList->AddRectRetro(grab_rect.Min, grab_rect.Max, false);
+    }
 
     return held;
 }
@@ -6292,8 +6369,15 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         hovered = true;
     if (hovered || selected)
     {
-        const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : (hovered || g.Style.RetroMode) ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        /*if (g.Style.RetroMode)
+        {
+            RenderFrame(bb.Max + ImVec2(0.0f, 1.0f), bb.Min, col, true, 0.0f);
+        }
+        else
+        {*/
         RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+        //}
     }
     RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
 
