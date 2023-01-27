@@ -419,6 +419,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - SmallButton()
 // - InvisibleButton()
 // - ArrowButton()
+// - HighlightButton()
 // - CloseButton() [Internal]
 // - CollapseButton() [Internal]
 // - GetWindowScrollbarID() [Internal]
@@ -810,6 +811,34 @@ bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
 {
     float sz = GetFrameHeight();
     return ArrowButtonEx(str_id, dir, ImVec2(sz, sz), ImGuiButtonFlags_None);
+}
+
+bool ImGui::HighlightButton(const char* label, bool active, const ImVec2& size)
+{
+    bool clicked = false;
+    
+    if (active)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+
+    if (ImGui::Button(label, size))
+    {
+        clicked = true;
+    }
+
+    if (active)
+    {
+        ImGui::PopStyleColor(2);
+    }
+
+    return clicked;
+}
+
+bool ImGui::HighlightButton(const char* on_label, const char* off_label, bool active, const ImVec2& size)
+{
+    return HighlightButton(active ? on_label : off_label, active, size);
 }
 
 // Button to close a window
