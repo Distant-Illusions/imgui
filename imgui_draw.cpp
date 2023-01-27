@@ -1514,9 +1514,9 @@ void ImDrawList::AddRectRetro(ImVec2 min, ImVec2 max, const bool inset)
     ImU32 bottomRightInner = IM_COL32(128,128,128,255);
 
     if (inset) {
-        ImVec2 tmp = min;
-        min = max;
-        max = tmp;
+        const ImVec2 tmp = min;
+        min = ImVec2(max.x - 1.0f, max.y - 1.0f);
+        max = ImVec2(tmp.x + 1.0f, tmp.y + 1.0f);
     }
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1528,9 +1528,9 @@ void ImDrawList::AddRectRetro(ImVec2 min, ImVec2 max, const bool inset)
     drawList->PathLineTo(ImVec2(b.x, a.y));
     drawList->PathStroke(topLeft, false, 1.0f);
 
-    drawList->PathLineTo(ImVec2(a.x, b.y));
+    drawList->PathLineTo(ImVec2(a.x- 1.0f, b.y));
     drawList->PathLineTo(b);
-    drawList->PathLineTo(ImVec2(b.x, a.y - 1.0f));
+    drawList->PathLineTo(ImVec2(b.x, a.y));
     drawList->PathStroke(bottomRight, false, 1.0f);
 
 
