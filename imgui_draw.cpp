@@ -380,7 +380,7 @@ void ImGui::StyleModern(ImGuiStyle* dst)
     ImGuiStyle* style = dst ? dst : &ImGui::GetStyle();
 
     style->Alpha = 1.0f;
-    style->DisabledAlpha = 0.75f;
+    style->DisabledAlpha = 0.375f;
     style->WindowPadding = ImVec2(8,8);
     style->WindowRounding = 0.0f;
     style->WindowBorderSize = 1.0f;
