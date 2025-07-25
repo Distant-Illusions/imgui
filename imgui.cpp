@@ -7270,7 +7270,7 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     {
         if (g.Style.RetroMode)
         {
-            float y = window->Pos.y + window->TitleBarHeight() - 1;
+            float y = window->Pos.y + window->TitleBarHeight - 1;
             window->DrawList->AddLine(ImVec2(window->Pos.x + border_size, y), ImVec2(window->Pos.x + window->Size.x - border_size, y), border_col, g.Style.FrameBorderSize);
         }
         else
