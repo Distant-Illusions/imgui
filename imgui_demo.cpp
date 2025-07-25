@@ -1407,7 +1407,7 @@ static void DemoWindowWidgetsComboBoxes()
                 filter.Clear();
             }
             ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
-            filter.Draw("##Filter", -FLT_MIN);
+            filter.Draw("##Filter", "", -FLT_MIN);
 
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
